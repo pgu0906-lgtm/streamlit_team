@@ -1,48 +1,59 @@
 import streamlit as st
-import base64
-from openai import OpenAI
+from PIL import Image
+from streamlit_drawable_canvas import st_canvas
 
-# 👉 Streamlit Cloud에서는 Settings → Secrets에 OPENAI_API_KEY 넣어두고 이렇게 불러오는 걸 추천
-client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+st.set_page_config(page_title="1인 가구 AI 해결사", page_icon="🏠", layout="wide")
 
-st.title("📸 사물 인식 설명 봇")
+# ============================
+# 🔐 1) 사용자에게 OpenAI API Key 입력받기
+# ============================
 
-st.write("카메라로 사진을 찍으면, 사진 속에 있는 사물들을 설명해줄게요!")
+st.sidebar.header("🔐 OpenAI API Key 입력")
+openai_key = st.sidebar.text_input(
+    "OpenAI API Key",
+    type="password",
+    placeholder="sk-xxxx...",
+)
 
-img_file = st.camera_input("사진을 찍어주세요")
+if openai_key:
+    st.session_state["OPENAI_KEY"] = openai_key
 
-if img_file is not None:
-    st.image(img_file, caption="촬영한 사진", use_column_width=True)
+# 안내 문구
+if "OPENAI_KEY" not in st.session_state:
+    st.info("좌측 사이드바에 OpenAI API Key를 입력해주세요.")
+else:
+    st.success("OpenAI Key가 설정되었습니다!")
 
-    if st.button("사진 분석하기"):
-        with st.spinner("사진 분석 중..."):
-            # 1) 이미지 → base64 인코딩
-            img_bytes = img_file.getvalue()
-            b64_img = base64.b64encode(img_bytes).decode("utf-8")
-            img_data_url = f"data:image/jpeg;base64,{b64_img}"
+# ----------------------------
 
-            # 2) OpenAI 비전 모델 호출 (Responses API 스타일)
-            response = client.responses.create(
-                model="gpt-4.1-mini",  # 또는 gpt-4o 등 비전 지원 모델
-                input=[{
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "input_text",
-                            "text": (
-                                "이 사진에 보이는 주요 사물들을 한국어로 설명해줘. "
-                                "각 사물이 무엇인지, 어떤 특징이 있는지도 간단히 말해줘."
-                            ),
-                        },
-                        {
-                            "type": "input_image",
-                            "image_url": img_data_url,
-                            "detail": "auto",
-                        },
-                    ],
-                }],
-            )
+st.title("🏠 1인 가구 AI 해결사")
+st.write("원룸 설계도를 보고, 고민되는 공간을 클릭하세요!")
 
-            description = response.output_text
-            st.subheader("설명 결과")
-            st.write(description)
+img = Image.open("assets/oneroom.png")
+
+canvas = st_canvas(
+    fill_color="rgba(0,0,0,0)",
+    stroke_width=0,
+    background_image=img,
+    update_streamlit=True,
+    height=img.height,
+    width=img.width,
+    drawing_mode="transform",
+    key="room_canvas",
+)
+
+if canvas.json_data is not None and len(canvas.json_data["objects"]) > 0:
+    obj = canvas.json_data["objects"][-1]
+    x, y = obj["left"], obj["top"]
+
+    if 90 < x < 220 and 250 < y < 380:
+        st.switch_page("pages/1_청소_챗봇.py")
+
+    elif 220 < x < 350 and 250 < y < 380:
+        st.switch_page("pages/2_빨래_챗봇.py")
+
+    elif 350 < x < 480 and 150 < y < 280:
+        st.switch_page("pages/3_고지서_챗봇.py")
+
+    elif 350 < x < 520 and 300 < y < 430:
+        st.switch_page("pages/4_부엌_챗봇.py")
