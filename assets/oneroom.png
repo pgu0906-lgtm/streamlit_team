@@ -1,0 +1,1 @@
+img = Image.open("/mnt/data/dd69b3f1-05d9-46ff-aa7d-8791169a823e.png")  # 절대 경로로 이미지 파일 경로 지정
